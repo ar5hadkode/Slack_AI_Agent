@@ -1,10 +1,12 @@
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from openai import OpenAI
-import os
 from dotenv import load_dotenv
 import urllib.parse
-from RAG import get_or_create_retriever , ask_question_with_rag
+import os
+import threading
+from flask import Flask
+from RAG import get_or_create_retriever, ask_question_with_rag
 
 load_dotenv()
 
@@ -13,11 +15,9 @@ openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @slack_app.event("app_mention")
 def handle_mention(event, say):
-    print("Bot was mentioned in a message")
     user_id = event["user"]
     thread_ts = event.get("ts")
     user_message = event['text'].strip()
-    
     encoded_message = urllib.parse.quote(user_message)
 
     say(
@@ -63,7 +63,6 @@ def handle_generic_button(ack, body, say):
                 {"role": "user", "content": user_message}
             ]
         )
-        
         bot_reply = response.choices[0].message.content
         say(text=f"<@{user_id}> {bot_reply}", thread_ts=thread_ts)
     except Exception as e:
@@ -78,17 +77,24 @@ def handle_company_button(ack, body, say):
     user_message = urllib.parse.unquote(encoded_message)
 
     try:
-        
-        retriever = get_or_create_retriever() 
-
+        retriever = get_or_create_retriever()
         rag_answer = ask_question_with_rag(retriever, user_message)
-
         say(text=f"<@{user_id}> {rag_answer}", thread_ts=thread_ts)
     except Exception as e:
         print(f"Error in company-specific RAG: {e}")
         say(f"<@{user_id}> Sorry, something went wrong while answering your company-specific question.", thread_ts=thread_ts)
 
-if __name__ == "__main__":
-    print("⚡️ Slack AI agent is running!")
+flask_app = Flask(__name__)
+
+@flask_app.route("/")
+def home():
+    return "Slack bot is running!"
+
+def run_slack_bot():
     handler = SocketModeHandler(slack_app, os.getenv("SLACK_APP_TOKEN"))
     handler.start()
+
+if __name__ == "__main__":
+    threading.Thread(target=run_slack_bot).start()
+    port = int(os.environ.get("PORT", 10000))
+    flask_app.run(host="0.0.0.0", port=port)
