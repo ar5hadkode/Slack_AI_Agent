@@ -13,7 +13,8 @@ def get_or_create_retriever():
     embeddings = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
     
     if os.path.exists(INDEX_DIR):
-        vectorstore = FAISS.load_local(INDEX_DIR, embeddings)
+        vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
+
     else:
         loader = PyPDFLoader(PDF_PATH)
         documents = loader.load()
