@@ -90,11 +90,24 @@ flask_app = Flask(__name__)
 def home():
     return "Slack bot is running!"
 
-def run_slack_bot():
-    handler = SocketModeHandler(slack_app, os.getenv("SLACK_APP_TOKEN"))
-    handler.start()
+# def run_slack_bot():
+#     handler = SocketModeHandler(slack_app, os.getenv("SLACK_APP_TOKEN"))
+#     handler.start()
 
+def run_slack_bot():
+    try:
+        handler = SocketModeHandler(slack_app, os.getenv("SLACK_APP_TOKEN"))
+        handler.connect()  # non-blocking version of .start()
+        print("⚡️ Slack bot connected via Socket Mode!")
+    except Exception as e:
+        print(f"Error starting SocketModeHandler: {e}")
+
+
+# if __name__ == "__main__":
+#     threading.Thread(target=run_slack_bot).start()
+#     port = int(os.environ.get("PORT", 10000))
+#     flask_app.run(host="0.0.0.0", port=port)
 if __name__ == "__main__":
-    threading.Thread(target=run_slack_bot).start()
+    run_slack_bot()
     port = int(os.environ.get("PORT", 10000))
     flask_app.run(host="0.0.0.0", port=port)
